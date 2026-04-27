@@ -1,25 +1,12 @@
 import { MetricCard } from "@/components/metric-card";
-import { RevenueChart } from "@/components/revenue-chart";
 import {
-  metrics,
-  monthlyRevenue,
-  weeklyCustomers,
-  reports,
-} from "../../frontend-sample-data";
+  RevenueChart,
+  CategoryMixChart,
+  TopProductsChart,
+} from "@/components/revenue-chart";
+import { getDashboardData } from "@/lib/queries";
 
-const priorMonthsRevenue = [
-  { month: "Mar 2025", revenue: 92500 },
-  { month: "Apr 2025", revenue: 98200 },
-  { month: "May 2025", revenue: 104100 },
-  { month: "Jun 2025", revenue: 109800 },
-  { month: "Jul 2025", revenue: 112400 },
-  { month: "Aug 2025", revenue: 115300 },
-];
-
-const twelveMonthRevenue = [
-  ...priorMonthsRevenue,
-  ...monthlyRevenue.map(({ month, revenue }) => ({ month, revenue })),
-];
+export const dynamic = "force-dynamic";
 
 const iconClass = "h-[18px] w-[18px]";
 
@@ -39,7 +26,40 @@ const revenueIcon = (
   </svg>
 );
 
-const usersIcon = (
+const profitIcon = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={iconClass}
+    aria-hidden
+  >
+    <path d="M3 17l6-6 4 4 8-8" />
+    <path d="M14 7h7v7" />
+  </svg>
+);
+
+const orderIcon = (
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.5}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={iconClass}
+    aria-hidden
+  >
+    <path d="M3 3h2l2.4 12.3A2 2 0 0 0 9.4 17H17a2 2 0 0 0 2-1.6L20.5 8H6" />
+    <circle cx="9" cy="20" r="1" />
+    <circle cx="17" cy="20" r="1" />
+  </svg>
+);
+
+const customerIcon = (
   <svg
     viewBox="0 0 24 24"
     fill="none"
@@ -57,92 +77,69 @@ const usersIcon = (
   </svg>
 );
 
-const trendingIcon = (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={iconClass}
-    aria-hidden
-  >
-    <path d="M3 17l6-6 4 4 8-8" />
-    <path d="M14 7h7v7" />
-  </svg>
-);
+const SAR = (n: number) =>
+  `SAR ${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
 
-const sparklesIcon = (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={iconClass}
-    aria-hidden
-  >
-    <path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z" />
-    <path d="M19 14l.9 2.1L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.9z" />
-    <path d="M5 4l.6 1.4L7 6l-1.4.6L5 8l-.6-1.4L3 6l1.4-.6z" />
-  </svg>
-);
+const pct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
 
-function computeGrowthRate(): string {
-  const first = monthlyRevenue[0].revenue;
-  const last = monthlyRevenue[monthlyRevenue.length - 1].revenue;
-  const pct = ((last - first) / first) * 100;
-  return `${pct.toFixed(1)}%`;
-}
+const trendOf = (n: number): "up" | "down" | "flat" =>
+  Math.abs(n) < 0.05 ? "flat" : n > 0 ? "up" : "down";
 
-function computeActiveUsers(): string {
-  const latest = weeklyCustomers[weeklyCustomers.length - 1].customers;
-  return latest.toLocaleString();
-}
+const statusBadge: Record<string, string> = {
+  Completed: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Processing: "border-amber-200 bg-amber-50 text-amber-800",
+  Shipped: "border-sky-200 bg-sky-50 text-sky-800",
+  Returned: "border-rose-200 bg-rose-50 text-rose-800",
+};
 
-const cards = [
-  {
-    title: "Total Revenue",
-    value: metrics[0].value,
-    change: metrics[0].change,
-    trend: "up" as const,
-    period: metrics[0].period,
-    icon: revenueIcon,
-  },
-  {
-    title: "Active Users",
-    value: computeActiveUsers(),
-    change: "+6.4%",
-    trend: "up" as const,
-    period: "weekly visitors",
-    icon: usersIcon,
-  },
-  {
-    title: "Growth Rate",
-    value: computeGrowthRate(),
-    change: "+2.8%",
-    trend: "up" as const,
-    period: "6-month revenue",
-    icon: trendingIcon,
-  },
-  {
-    title: "AI Insights",
-    value: reports.length.toString(),
-    change: "+3 new",
-    trend: "up" as const,
-    period: "this month",
-    icon: sparklesIcon,
-  },
-];
+export default async function DashboardPage() {
+  const data = await getDashboardData();
+  const { totals, trends, monthly, categories, topProducts, lowStock, feedback, recentSales } = data;
 
-export default function DashboardPage() {
+  const cards = [
+    {
+      title: "Total Revenue",
+      value: SAR(totals.revenue),
+      change: pct(trends.revenueChangePct),
+      trend: trendOf(trends.revenueChangePct),
+      period: "all completed sales",
+      caption: `${totals.completedOrders.toLocaleString()} completed orders`,
+      icon: revenueIcon,
+    },
+    {
+      title: "Net Profit",
+      value: SAR(totals.profit),
+      change: pct(trends.profitChangePct),
+      trend: trendOf(trends.profitChangePct),
+      period: `${totals.grossMargin.toFixed(1)}% margin`,
+      caption: `Expenses ${SAR(totals.expenses)}`,
+      icon: profitIcon,
+    },
+    {
+      title: "Avg Order Value",
+      value: SAR(totals.averageOrder),
+      change: pct(trends.averageOrderChangePct),
+      trend: trendOf(trends.averageOrderChangePct),
+      period: "month over month",
+      caption: `${totals.totalOrders} total orders`,
+      icon: orderIcon,
+    },
+    {
+      title: "Customers",
+      value: totals.customers.toLocaleString(),
+      change: undefined,
+      trend: undefined,
+      period: "registered loyalty base",
+      caption: `${totals.activeProducts} of ${totals.products} products active`,
+      icon: customerIcon,
+    },
+  ] as const;
+
   return (
     <div className="px-12 py-12">
       <header className="mb-12 max-w-3xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-          Dashboard
+          Dashboard · Live from Supabase
         </p>
         <h1 className="mt-3 font-serif text-5xl leading-tight tracking-tight text-ink">
           Great Numbers.
@@ -150,7 +147,8 @@ export default function DashboardPage() {
           <span className="italic text-muted">No Nonsense.</span>
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-foreground/80">
-          A clean, honest view of how the workspace is performing this period.
+          A clean, honest view of how the workspace is performing — sales,
+          expenses, inventory, and customer feedback, straight from the database.
         </p>
       </header>
 
@@ -161,7 +159,166 @@ export default function DashboardPage() {
       </div>
 
       <div className="mt-8">
-        <RevenueChart data={twelveMonthRevenue} />
+        <RevenueChart data={monthly} />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <CategoryMixChart data={categories} />
+        <TopProductsChart data={topProducts} />
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-5 xl:grid-cols-3">
+        <section className="rounded-md border border-rule bg-surface p-6 shadow-[0_1px_0_rgba(28,26,26,0.04),0_8px_24px_-12px_rgba(28,26,26,0.12)] xl:col-span-2">
+          <header className="mb-4 flex items-end justify-between border-b border-rule pb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
+                Recent Sales
+              </p>
+              <h3 className="mt-1 font-serif text-xl tracking-tight text-ink">
+                Latest activity
+              </h3>
+            </div>
+            <span className="text-xs text-muted">Showing {recentSales.length}</span>
+          </header>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  <th className="py-2 pr-4">Date</th>
+                  <th className="py-2 pr-4">Customer</th>
+                  <th className="py-2 pr-4">Product</th>
+                  <th className="py-2 pr-4">Category</th>
+                  <th className="py-2 pr-4 text-right">Amount</th>
+                  <th className="py-2 pr-4">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentSales.map((s) => (
+                  <tr key={s.id} className="border-t border-rule/70 align-top">
+                    <td className="py-3 pr-4 font-mono text-[12px] text-foreground/80">
+                      {s.sale_date}
+                    </td>
+                    <td className="py-3 pr-4 text-foreground">
+                      {s.customer_name ?? (
+                        <span className="italic text-muted">Walk-in</span>
+                      )}
+                    </td>
+                    <td className="py-3 pr-4 text-ink">{s.product}</td>
+                    <td className="py-3 pr-4 text-foreground/80">{s.category}</td>
+                    <td className="py-3 pr-4 text-right font-serif text-ink">
+                      {SAR(Number(s.amount_sar ?? 0))}
+                    </td>
+                    <td className="py-3 pr-4">
+                      <span
+                        className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${
+                          statusBadge[s.status ?? ""] ?? "border-rule bg-surface text-muted"
+                        }`}
+                      >
+                        {s.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="rounded-md border border-rule bg-surface p-6 shadow-[0_1px_0_rgba(28,26,26,0.04),0_8px_24px_-12px_rgba(28,26,26,0.12)]">
+          <header className="mb-4 flex items-end justify-between border-b border-rule pb-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
+                Operations
+              </p>
+              <h3 className="mt-1 font-serif text-xl tracking-tight text-ink">
+                Heads up
+              </h3>
+            </div>
+          </header>
+
+          <div className="space-y-5 text-sm">
+            <div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Low Stock
+                </span>
+                <span className="font-serif text-ink">{totals.lowStockCount}</span>
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                {lowStock.slice(0, 5).map((item) => (
+                  <li
+                    key={item.product_id}
+                    className="flex items-center justify-between rounded-md border border-rule/80 bg-background px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-ink">{item.product_name}</p>
+                      <p className="text-[11px] text-muted">
+                        {item.category} · {item.warehouse_location}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-xs font-medium ${
+                        item.in_stock === 0 ? "text-rose-700" : "text-amber-700"
+                      }`}
+                    >
+                      {item.in_stock} / {item.reorder_level}
+                    </span>
+                  </li>
+                ))}
+                {lowStock.length === 0 ? (
+                  <li className="text-xs italic text-muted">
+                    All products above reorder level.
+                  </li>
+                ) : null}
+              </ul>
+            </div>
+
+            <div className="border-t border-rule pt-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  Customer Feedback
+                </span>
+                <span className="font-serif text-ink">
+                  {feedback.averageRating.toFixed(2)} ★
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-muted">
+                {feedback.total} reviews · {feedback.pending} pending response
+              </p>
+              <ul className="mt-3 space-y-1">
+                {feedback.ratingDistribution
+                  .slice()
+                  .reverse()
+                  .map((r) => {
+                    const max = Math.max(
+                      ...feedback.ratingDistribution.map((d) => d.count),
+                      1,
+                    );
+                    const w = (r.count / max) * 100;
+                    return (
+                      <li
+                        key={r.rating}
+                        className="flex items-center gap-2 text-xs text-foreground/80"
+                      >
+                        <span className="w-6 font-mono text-muted">
+                          {r.rating}★
+                        </span>
+                        <span className="relative h-2 flex-1 overflow-hidden rounded-sm bg-foreground/[0.06]">
+                          <span
+                            className="absolute inset-y-0 left-0 bg-ink"
+                            style={{ width: `${w}%` }}
+                          />
+                        </span>
+                        <span className="w-6 text-right font-mono text-muted">
+                          {r.count}
+                        </span>
+                      </li>
+                    );
+                  })}
+              </ul>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
