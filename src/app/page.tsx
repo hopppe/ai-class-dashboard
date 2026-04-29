@@ -1,3 +1,4 @@
+import { AIInsightsCard } from "@/components/ai-insights";
 import { MetricCard } from "@/components/metric-card";
 import {
   RevenueChart,
@@ -5,6 +6,8 @@ import {
   TopProductsChart,
 } from "@/components/revenue-chart";
 import { getDashboardData } from "@/lib/queries";
+import { cookies } from "next/headers";
+import { ui, getLang } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -93,62 +96,72 @@ const statusBadge: Record<string, string> = {
 };
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
+  const [data, cookieStore] = await Promise.all([getDashboardData(), cookies()]);
+  const T = ui[getLang(cookieStore.get("lang")?.value)].dashboard;
   const { totals, trends, monthly, categories, topProducts, lowStock, feedback, recentSales } = data;
 
-  const cards = [
+  type CardEntry = {
+    title: string;
+    value: string;
+    change: string | undefined;
+    trend: "up" | "down" | "flat" | undefined;
+    period: string;
+    caption: string;
+    icon: React.ReactNode;
+  };
+
+  const cards: CardEntry[] = [
     {
-      title: "Total Revenue",
+      title: T.cards.revenue,
       value: SAR(totals.revenue),
       change: pct(trends.revenueChangePct),
       trend: trendOf(trends.revenueChangePct),
-      period: "all completed sales",
-      caption: `${totals.completedOrders.toLocaleString()} completed orders`,
+      period: T.cards.allCompletedSales,
+      caption: T.cards.completedOrders(totals.completedOrders),
       icon: revenueIcon,
     },
     {
-      title: "Net Profit",
+      title: T.cards.profit,
       value: SAR(totals.profit),
       change: pct(trends.profitChangePct),
       trend: trendOf(trends.profitChangePct),
-      period: `${totals.grossMargin.toFixed(1)}% margin`,
-      caption: `Expenses ${SAR(totals.expenses)}`,
+      period: `${totals.grossMargin.toFixed(1)}% ${T.cards.margin}`,
+      caption: `${T.cards.expenses} ${SAR(totals.expenses)}`,
       icon: profitIcon,
     },
     {
-      title: "Avg Order Value",
+      title: T.cards.aov,
       value: SAR(totals.averageOrder),
       change: pct(trends.averageOrderChangePct),
       trend: trendOf(trends.averageOrderChangePct),
-      period: "month over month",
-      caption: `${totals.totalOrders} total orders`,
+      period: T.cards.monthOverMonth,
+      caption: `${totals.totalOrders} ${T.cards.totalOrders}`,
       icon: orderIcon,
     },
     {
-      title: "Customers",
+      title: T.cards.customers,
       value: totals.customers.toLocaleString(),
       change: undefined,
       trend: undefined,
-      period: "registered loyalty base",
-      caption: `${totals.activeProducts} of ${totals.products} products active`,
+      period: T.cards.loyaltyBase,
+      caption: T.cards.productsActive(totals.activeProducts, totals.products),
       icon: customerIcon,
     },
-  ] as const;
+  ];
 
   return (
     <div className="px-12 py-12">
       <header className="mb-12 max-w-3xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-          Dashboard · Live from Supabase
+          {T.overline}
         </p>
         <h1 className="mt-3 font-serif text-5xl leading-tight tracking-tight text-ink">
-          Great Numbers.
+          {T.title}
           <br />
-          <span className="italic text-muted">No Nonsense.</span>
+          <span className="italic text-muted">{T.titleItalic}</span>
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-foreground/80">
-          A clean, honest view of how the workspace is performing — sales,
-          expenses, inventory, and customer feedback, straight from the database.
+          {T.subtitle}
         </p>
       </header>
 
@@ -156,6 +169,10 @@ export default async function DashboardPage() {
         {cards.map((card) => (
           <MetricCard key={card.title} {...card} />
         ))}
+      </div>
+
+      <div className="mt-8">
+        <AIInsightsCard metrics={data} />
       </div>
 
       <div className="mt-8">
@@ -172,24 +189,24 @@ export default async function DashboardPage() {
           <header className="mb-4 flex items-end justify-between border-b border-rule pb-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-                Recent Sales
+                {T.recentSales}
               </p>
               <h3 className="mt-1 font-serif text-xl tracking-tight text-ink">
-                Latest activity
+                {T.latestActivity}
               </h3>
             </div>
-            <span className="text-xs text-muted">Showing {recentSales.length}</span>
+            <span className="text-xs text-muted">{T.showing(recentSales.length)}</span>
           </header>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  <th className="py-2 pr-4">Date</th>
-                  <th className="py-2 pr-4">Customer</th>
-                  <th className="py-2 pr-4">Product</th>
-                  <th className="py-2 pr-4">Category</th>
-                  <th className="py-2 pr-4 text-right">Amount</th>
-                  <th className="py-2 pr-4">Status</th>
+                  <th className="py-2 pr-4">{T.tableDate}</th>
+                  <th className="py-2 pr-4">{T.tableCustomer}</th>
+                  <th className="py-2 pr-4">{T.tableProduct}</th>
+                  <th className="py-2 pr-4">{T.tableCategory}</th>
+                  <th className="py-2 pr-4 text-right">{T.tableAmount}</th>
+                  <th className="py-2 pr-4">{T.tableStatus}</th>
                 </tr>
               </thead>
               <tbody>
@@ -200,7 +217,7 @@ export default async function DashboardPage() {
                     </td>
                     <td className="py-3 pr-4 text-foreground">
                       {s.customer_name ?? (
-                        <span className="italic text-muted">Walk-in</span>
+                        <span className="italic text-muted">{T.walkIn}</span>
                       )}
                     </td>
                     <td className="py-3 pr-4 text-ink">{s.product}</td>
@@ -228,10 +245,10 @@ export default async function DashboardPage() {
           <header className="mb-4 flex items-end justify-between border-b border-rule pb-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted">
-                Operations
+                {T.operations}
               </p>
               <h3 className="mt-1 font-serif text-xl tracking-tight text-ink">
-                Heads up
+                {T.headsUp}
               </h3>
             </div>
           </header>
@@ -240,7 +257,7 @@ export default async function DashboardPage() {
             <div>
               <div className="flex items-baseline justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Low Stock
+                  {T.lowStock}
                 </span>
                 <span className="font-serif text-ink">{totals.lowStockCount}</span>
               </div>
@@ -267,7 +284,7 @@ export default async function DashboardPage() {
                 ))}
                 {lowStock.length === 0 ? (
                   <li className="text-xs italic text-muted">
-                    All products above reorder level.
+                    {T.allAboveReorder}
                   </li>
                 ) : null}
               </ul>
@@ -276,14 +293,14 @@ export default async function DashboardPage() {
             <div className="border-t border-rule pt-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                  Customer Feedback
+                  {T.feedback}
                 </span>
                 <span className="font-serif text-ink">
                   {feedback.averageRating.toFixed(2)} ★
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted">
-                {feedback.total} reviews · {feedback.pending} pending response
+                {T.feedbackMeta(feedback.total, feedback.pending)}
               </p>
               <ul className="mt-3 space-y-1">
                 {feedback.ratingDistribution

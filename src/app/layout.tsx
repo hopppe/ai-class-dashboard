@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Lora, Lato } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Sidebar } from "@/components/sidebar";
+import { ClientProviders } from "@/components/client-providers";
+import { getLang } from "@/lib/i18n";
 
 const lora = Lora({
   variable: "--font-lora",
@@ -20,19 +23,25 @@ export const metadata: Metadata = {
   description: "AI-powered analytics dashboard",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const lang = getLang(cookieStore.get("lang")?.value);
+
   return (
     <html
-      lang="en"
+      lang={lang}
+      dir={lang === "ar" ? "rtl" : "ltr"}
       className={`${lora.variable} ${lato.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
-        <Sidebar />
-        <main className="min-h-screen pl-64">{children}</main>
+        <ClientProviders initialLang={lang}>
+          <Sidebar />
+          <main className="min-h-screen pl-64">{children}</main>
+        </ClientProviders>
       </body>
     </html>
   );

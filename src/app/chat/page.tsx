@@ -1,13 +1,20 @@
+import { ChatPanel } from "@/components/chat-panel";
+import { getDashboardData } from "@/lib/queries";
 import { cookies } from "next/headers";
 import { ui, getLang } from "@/lib/i18n";
 
-export default async function SettingsPage() {
-  const cookieStore = await cookies();
-  const T = ui[getLang(cookieStore.get("lang")?.value)].settings;
+export const dynamic = "force-dynamic";
+
+export default async function ChatPage() {
+  const [data, cookieStore] = await Promise.all([
+    getDashboardData(),
+    cookies(),
+  ]);
+  const T = ui[getLang(cookieStore.get("lang")?.value)].chat;
 
   return (
     <div className="px-12 py-12">
-      <header className="mb-12 max-w-3xl">
+      <header className="mb-10 max-w-3xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
           {T.overline}
         </p>
@@ -19,9 +26,7 @@ export default async function SettingsPage() {
         </p>
       </header>
 
-      <div className="rounded-md border border-rule bg-surface p-10 text-foreground/70 shadow-[0_1px_0_rgba(28,26,26,0.04),0_8px_24px_-12px_rgba(28,26,26,0.12)]">
-        <p className="font-serif text-lg italic">{T.placeholder}</p>
-      </div>
+      <ChatPanel metrics={data} />
     </div>
   );
 }

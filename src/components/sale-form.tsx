@@ -2,12 +2,15 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createSaleAction, type SaleActionState } from "@/app/actions";
+import { ui } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n";
 
 type Option = { id: string; name: string; category?: string; price?: number };
 
 type Props = {
   customers: Option[];
   products: Option[];
+  lang: Lang;
 };
 
 const initialState: SaleActionState = { status: "idle" };
@@ -21,7 +24,8 @@ const paymentOptions = [
   "Mada",
 ];
 
-export function SaleForm({ customers, products }: Props) {
+export function SaleForm({ customers, products, lang }: Props) {
+  const T = ui[lang].entry;
   const [state, formAction, isPending] = useActionState(
     createSaleAction,
     initialState,
@@ -57,7 +61,7 @@ export function SaleForm({ customers, products }: Props) {
       className="grid gap-5 sm:grid-cols-2"
     >
       <Field
-        label="Date"
+        label={T.fieldDate}
         name="sale_date"
         type="date"
         defaultValue={new Date().toISOString().slice(0, 10)}
@@ -66,17 +70,17 @@ export function SaleForm({ customers, products }: Props) {
       />
 
       <SelectField
-        label="Customer"
+        label={T.fieldCustomer}
         name="customer_name"
         error={fieldError("customer_name")}
         options={[
-          { value: "", label: "Walk-in / Unknown" },
+          { value: "", label: T.walkIn },
           ...customers.map((c) => ({ value: c.name, label: c.name })),
         ]}
       />
 
       <SelectField
-        label="Product"
+        label={T.fieldProduct}
         name="product"
         value={productId}
         onChange={setProductId}
@@ -84,7 +88,7 @@ export function SaleForm({ customers, products }: Props) {
         error={fieldError("product")}
         required
         options={[
-          { value: "", label: "Select a product…" },
+          { value: "", label: T.selectProduct },
           ...products.map((p) => ({
             value: p.id,
             label: p.name,
@@ -94,17 +98,17 @@ export function SaleForm({ customers, products }: Props) {
       />
 
       <Field
-        label="Category"
+        label={T.fieldCategory}
         name="category"
         value={inferredCategory}
         readOnly
-        placeholder="Select product to autofill"
+        placeholder={T.categoryPlaceholder}
         error={fieldError("category")}
         required
       />
 
       <Field
-        label="Amount (SAR)"
+        label={T.fieldAmount}
         name="amount_sar"
         type="number"
         min="0"
@@ -116,7 +120,7 @@ export function SaleForm({ customers, products }: Props) {
       />
 
       <SelectField
-        label="Status"
+        label={T.fieldStatus}
         name="status"
         defaultValue="Completed"
         error={fieldError("status")}
@@ -125,7 +129,7 @@ export function SaleForm({ customers, products }: Props) {
       />
 
       <SelectField
-        label="Payment Method"
+        label={T.fieldPayment}
         name="payment_method"
         defaultValue="Credit Card"
         error={fieldError("payment_method")}
@@ -136,9 +140,9 @@ export function SaleForm({ customers, products }: Props) {
       />
 
       <Field
-        label="Notes"
+        label={T.fieldNotes}
         name="notes"
-        placeholder="Optional"
+        placeholder={T.optional}
         error={fieldError("notes")}
       />
 
@@ -166,7 +170,7 @@ export function SaleForm({ customers, products }: Props) {
             </span>
           ) : (
             <span className="font-serif italic">
-              All fields validated server-side before save.
+              {T.formFooter}
             </span>
           )}
         </div>
@@ -175,7 +179,7 @@ export function SaleForm({ customers, products }: Props) {
           disabled={isPending}
           className="inline-flex items-center gap-2 rounded-md border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-surface transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {isPending ? "Saving…" : "Record sale"}
+          {isPending ? T.submitting : T.submit}
           <svg
             viewBox="0 0 24 24"
             fill="none"

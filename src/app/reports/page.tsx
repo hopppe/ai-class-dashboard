@@ -1,4 +1,6 @@
 import { getReportsData } from "@/lib/queries";
+import { cookies } from "next/headers";
+import { ui, getLang } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,8 @@ const tierColor: Record<string, string> = {
 };
 
 export default async function ReportsPage() {
-  const data = await getReportsData();
+  const [data, cookieStore] = await Promise.all([getReportsData(), cookies()]);
+  const T = ui[getLang(cookieStore.get("lang")?.value)].reports;
   const {
     topCustomers,
     cityBreakdown,
@@ -32,10 +35,10 @@ export default async function ReportsPage() {
     returnsAndPending.shipped;
 
   const summary = [
-    { label: "Revenue", value: SAR(totals.revenue) },
-    { label: "Expenses", value: SAR(totals.expenses) },
-    { label: "Net Profit", value: SAR(totals.profit) },
-    { label: "Gross Margin", value: `${totals.grossMargin.toFixed(1)}%` },
+    { label: T.labelRevenue, value: SAR(totals.revenue) },
+    { label: T.labelExpenses, value: SAR(totals.expenses) },
+    { label: T.labelProfit, value: SAR(totals.profit) },
+    { label: T.labelMargin, value: `${totals.grossMargin.toFixed(1)}%` },
   ];
 
   const bestMonth = monthly.length
@@ -46,15 +49,14 @@ export default async function ReportsPage() {
     <div className="px-12 py-12">
       <header className="mb-12 max-w-3xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-          Reports · Generated from live data
+          {T.overline}
         </p>
         <h1 className="mt-3 font-serif text-5xl leading-tight tracking-tight text-ink">
-          The story,{" "}
-          <span className="italic text-muted">on paper.</span>
+          {T.title}{" "}
+          <span className="italic text-muted">{T.titleItalic}</span>
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-foreground/80">
-          Operating reports compiled from sales, expenses, customers and
-          feedback in Supabase.
+          {T.subtitle}
         </p>
       </header>
 
@@ -76,8 +78,8 @@ export default async function ReportsPage() {
 
       <div className="mt-10 grid grid-cols-1 gap-5 xl:grid-cols-2">
         <ReportCard
-          eyebrow="Top customers"
-          title="Highest spend"
+          eyebrow={T.topCustomersEyebrow}
+          title={T.topCustomersTitle}
           tagline={
             bestMonth
               ? `${bestMonth.month} was the best month at ${SAR(bestMonth.profit)} profit.`
@@ -87,10 +89,10 @@ export default async function ReportsPage() {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                <th className="py-2 pr-3">Customer</th>
-                <th className="py-2 pr-3">City</th>
-                <th className="py-2 pr-3">Tier</th>
-                <th className="py-2 pr-3 text-right">Lifetime Spend</th>
+                <th className="py-2 pr-3">{T.colName}</th>
+                <th className="py-2 pr-3">{T.colCity}</th>
+                <th className="py-2 pr-3">{T.colTier}</th>
+                <th className="py-2 pr-3 text-right">{T.colLifetimeSpend}</th>
               </tr>
             </thead>
             <tbody>
@@ -116,13 +118,13 @@ export default async function ReportsPage() {
           </table>
         </ReportCard>
 
-        <ReportCard eyebrow="Geography" title="Customers &amp; spend by city">
+        <ReportCard eyebrow={T.geoEyebrow} title={T.geoTitle}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                <th className="py-2 pr-3">City</th>
-                <th className="py-2 pr-3 text-right">Customers</th>
-                <th className="py-2 pr-3 text-right">Lifetime spend</th>
+                <th className="py-2 pr-3">{T.colCity}</th>
+                <th className="py-2 pr-3 text-right">{T.colCustomers}</th>
+                <th className="py-2 pr-3 text-right">{T.colLifetimeSpend}</th>
               </tr>
             </thead>
             <tbody>
@@ -143,7 +145,7 @@ export default async function ReportsPage() {
       </div>
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <ReportCard eyebrow="Cash flow" title="Expenses by category">
+        <ReportCard eyebrow={T.cashEyebrow} title={T.cashTitle}>
           <ul className="space-y-2.5 text-sm">
             {expenseByCategory.map((e) => (
               <li key={e.category}>
@@ -157,19 +159,19 @@ export default async function ReportsPage() {
                     style={{ width: `${Math.min(100, e.share)}%` }}
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-muted">{e.share}% of spend</p>
+                <p className="mt-1 text-[11px] text-muted">{T.ofSpend(e.share.toString())}</p>
               </li>
             ))}
           </ul>
         </ReportCard>
 
-        <ReportCard eyebrow="Channel" title="Payment method mix">
+        <ReportCard eyebrow={T.channelEyebrow} title={T.channelTitle}>
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                <th className="py-2 pr-3">Method</th>
-                <th className="py-2 pr-3 text-right">Orders</th>
-                <th className="py-2 pr-3 text-right">Revenue</th>
+                <th className="py-2 pr-3">{T.colMethod}</th>
+                <th className="py-2 pr-3 text-right">{T.colOrders}</th>
+                <th className="py-2 pr-3 text-right">{T.colRevenue}</th>
               </tr>
             </thead>
             <tbody>
@@ -191,17 +193,17 @@ export default async function ReportsPage() {
 
       <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
         <ReportCard
-          eyebrow="Voice of customer"
-          title="Lowest-rated products"
-          tagline="Where to focus attention next."
+          eyebrow={T.voiceEyebrow}
+          title={T.voiceTitle}
+          tagline={T.voiceTagline}
         >
           <table className="min-w-full text-sm">
             <thead>
               <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.16em] text-muted">
-                <th className="py-2 pr-3">Product</th>
-                <th className="py-2 pr-3 text-right">Avg ★</th>
-                <th className="py-2 pr-3 text-right">Reviews</th>
-                <th className="py-2 pr-3 text-right">Pending</th>
+                <th className="py-2 pr-3">{T.colProduct}</th>
+                <th className="py-2 pr-3 text-right">{T.colAvgRating}</th>
+                <th className="py-2 pr-3 text-right">{T.colReviews}</th>
+                <th className="py-2 pr-3 text-right">{T.colPending}</th>
               </tr>
             </thead>
             <tbody>
@@ -228,18 +230,18 @@ export default async function ReportsPage() {
         </ReportCard>
 
         <ReportCard
-          eyebrow="Order pipeline"
-          title="Status of all sales"
-          tagline={`${totalOrders.toLocaleString()} orders in the database.`}
+          eyebrow={T.pipelineEyebrow}
+          title={T.pipelineTitle}
+          tagline={T.pipelineTagline(totalOrders)}
         >
           <ul className="space-y-3 text-sm">
             {(
               [
-                ["Completed", returnsAndPending.completed, "bg-emerald-600"],
-                ["Shipped", returnsAndPending.shipped, "bg-sky-600"],
-                ["Processing", returnsAndPending.processing, "bg-amber-600"],
-                ["Returned", returnsAndPending.returned, "bg-rose-600"],
-              ] as const
+                [T.statusCompleted, returnsAndPending.completed, "bg-emerald-600"],
+                [T.statusShipped, returnsAndPending.shipped, "bg-sky-600"],
+                [T.statusProcessing, returnsAndPending.processing, "bg-amber-600"],
+                [T.statusReturned, returnsAndPending.returned, "bg-rose-600"],
+              ] as [string, number, string][]
             ).map(([label, count, color]) => {
               const w = totalOrders === 0 ? 0 : (count / totalOrders) * 100;
               return (

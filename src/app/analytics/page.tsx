@@ -4,24 +4,28 @@ import {
   TopProductsChart,
 } from "@/components/revenue-chart";
 import { getDashboardData } from "@/lib/queries";
+import { cookies } from "next/headers";
+import { ui, getLang } from "@/lib/i18n";
 
 export const dynamic = "force-dynamic";
 
 export default async function AnalyticsPage() {
-  const { monthly, categories, topProducts } = await getDashboardData();
+  const [{ monthly, categories, topProducts }, cookieStore] = await Promise.all(
+    [getDashboardData(), cookies()],
+  );
+  const T = ui[getLang(cookieStore.get("lang")?.value)].analytics;
 
   return (
     <div className="px-12 py-12">
       <header className="mb-10 max-w-3xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
-          Analytics
+          {T.overline}
         </p>
         <h1 className="mt-3 font-serif text-5xl leading-tight tracking-tight text-ink">
-          Numbers, <span className="italic text-muted">in plain sight.</span>
+          {T.title} <span className="italic text-muted">{T.titleItalic}</span>
         </h1>
         <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-foreground/80">
-          Trends, category mix and top performers — drawn from the live sales
-          and expenses data.
+          {T.subtitle}
         </p>
       </header>
 
